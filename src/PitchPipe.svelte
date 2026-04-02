@@ -263,6 +263,8 @@ function paintCanvas() {
     requestAnimationFrame(paintCanvas)
 }
 
+let toggleMode = false
+
 let wheelAngle = 0
 let cursorAngle = 0
 let wheelToothAngleDelta = 1/12/2/4
@@ -356,6 +358,26 @@ const waveDims = {width: 55, height: 18}
         pointer-events: none; /* Allows click-through to underlying disk */
     }
     svg text.playing { font-size: 18pt; }
+
+    .toggle-mode-btn {
+        display: none;
+        width: 70px;
+        height: 40px;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 12pt;
+        cursor: pointer;
+        border: 1px solid white;
+        border-radius: 4px;
+        opacity: 0.7;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+        .toggle-mode-btn {
+            display: flex;
+        }
+    }
 </style>
 
 <div class="waves">
@@ -372,6 +394,9 @@ const waveDims = {width: 55, height: 18}
         </svg>
     </div>
     {/each}
+    <div class="toggle-mode-btn" on:pointerdown={() => toggleMode = !toggleMode}>
+        {toggleMode ? 'toggle' : 'hold'}
+    </div>
 </div>
 <canvas bind:this={canvasElt} />
 <div class="pitchpipe" bind:clientWidth={pipeDims.width} bind:clientHeight={pipeDims.height}>
@@ -397,6 +422,7 @@ const waveDims = {width: 55, height: 18}
                 name={note.name}
                 startNote={() => startNote(audio, note)}
                 releaseNote={() => releaseNote(audio, note)}
+                toggleMode={toggleMode}
                 />
             {/each}
             <path
