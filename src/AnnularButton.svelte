@@ -11,6 +11,7 @@
     export let name: string
     export let startNote: () => void
     export let releaseNote: () => void
+    export let toggleMode: boolean = false
     let angleWidth = 1 / 12
 
     function radial(angle: number, radius: number) {
@@ -41,7 +42,7 @@
         if (state == 'inactive') {
 
             startNote()
-            state = (e.shiftKey) ? 'sustain' : 'hold'
+            state = (e.shiftKey || toggleMode) ? 'sustain' : 'hold'
         } else if (state == 'sustain') {
             releaseNote()
             state = 'inactive'
