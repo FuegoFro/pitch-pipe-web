@@ -12,6 +12,7 @@
     export let startNote: () => void
     export let releaseNote: () => void
     export let toggleMode: boolean = false
+    $: if (!toggleMode) releaseSustain()
     let angleWidth = 1 / 12
 
     function radial(angle: number, radius: number) {

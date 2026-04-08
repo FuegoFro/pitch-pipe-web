@@ -359,24 +359,37 @@ const waveDims = {width: 55, height: 18}
     }
     svg text.playing { font-size: 18pt; }
 
-    .toggle-mode-btn {
+    .hold-toggle {
         display: none;
-        width: 70px;
-        height: 40px;
         justify-content: center;
-        align-items: center;
-        color: white;
-        font-size: 12pt;
-        cursor: pointer;
-        border: 1px solid white;
-        border-radius: 4px;
-        opacity: 0.7;
+        padding: 4px 0;
     }
 
     @media (hover: none) and (pointer: coarse) {
-        .toggle-mode-btn {
+        .hold-toggle {
             display: flex;
         }
+    }
+
+    .hold-toggle-track {
+        display: flex;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 20px;
+        overflow: hidden;
+        font-size: 12pt;
+        color: white;
+    }
+
+    .hold-toggle-track span {
+        padding: 4px 14px;
+        opacity: 0.5;
+        transition: background 0.15s, opacity 0.15s, color 0.15s;
+    }
+
+    .hold-toggle-track span.active {
+        background: white;
+        color: #1F2937;
+        opacity: 1;
     }
 </style>
 
@@ -394,8 +407,11 @@ const waveDims = {width: 55, height: 18}
         </svg>
     </div>
     {/each}
-    <div class="toggle-mode-btn" on:pointerdown={() => toggleMode = !toggleMode}>
-        {toggleMode ? 'toggle' : 'hold'}
+</div>
+<div class="hold-toggle">
+    <div class="hold-toggle-track">
+        <span class:active={!toggleMode} on:pointerdown={() => toggleMode = false}>hold</span>
+        <span class:active={toggleMode} on:pointerdown={() => toggleMode = true}>toggle</span>
     </div>
 </div>
 <canvas bind:this={canvasElt} />
