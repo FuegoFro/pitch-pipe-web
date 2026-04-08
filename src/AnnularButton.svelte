@@ -93,7 +93,7 @@
 <path
     d={sectorPath}
     class="stroked"
-    class:active={isHovered}
+    class:active={isHovered || state !== 'inactive'}
     fill="none"
     />
 <text
