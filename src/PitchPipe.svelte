@@ -129,8 +129,25 @@ function setupAudio() {
     let gainNode = new GainNode(ctx, {
         gain: 0.04,
     })
-    gainNode.connect(ctx.destination)
+
+    // Route through a MediaStreamDestinationNode so the OS treats this as
+    // media playback, which allows audio to continue when the screen locks.
+    let mediaStreamDest = ctx.createMediaStreamDestination()
+    gainNode.connect(mediaStreamDest)
     analyserNode.connect(gainNode)
+
+    // The <audio> element is never added to the DOM; it just registers the
+    // stream with the browser's media machinery.
+    let mediaAudioElt = new Audio()
+    mediaAudioElt.srcObject = mediaStreamDest.stream
+
+    // Autoplay is blocked until a user gesture. Resume the element
+    // whenever the AudioContext first starts (or resumes after lock).
+    ctx.addEventListener('statechange', () => {
+        if (ctx.state === 'running' && mediaAudioElt.paused) {
+            mediaAudioElt.play().catch((e) => console.warn('pitch-pipe: audio play() blocked', e))
+        }
+    })
 
     const dataArray = new Uint8Array(analyserNode.frequencyBinCount)
 
@@ -139,6 +156,7 @@ function setupAudio() {
         analyserNode,
         destination: analyserNode,
         dataArray,
+        mediaAudioElt,
     }
 }
 const audio = setupAudio()
@@ -155,13 +173,16 @@ function updatePlayingNoteName(playingNotes: Map<NoteSpec, OscillatorNode>) {
 
 
 let playingNotes = new Map<NoteSpec, OscillatorNode>()
-function startNote(audio: {ctx: AudioContext, destination: AudioNode}, note: NoteSpec) {
+function startNote(audio: {ctx: AudioContext, destination: AudioNode, mediaAudioElt: HTMLAudioElement}, note: NoteSpec) {
     // iOS will put the audio context into an interrupted state when the user switches away:
     // https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/state#resuming_interrupted_play_states_in_ios_safari
     // Perhaps this will fix things?
     if (audio.ctx.state != 'running') {
         audio.ctx.resume().then(() => startNote(audio, note))
         return
+    }
+    if (audio.mediaAudioElt.paused) {
+        audio.mediaAudioElt.play().catch((e) => console.warn('pitch-pipe: audio play() blocked', e))
     }
 
     if (playingNotes.has(note))
