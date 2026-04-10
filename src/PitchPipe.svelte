@@ -161,6 +161,31 @@ function setupAudio() {
 }
 const audio = setupAudio()
 
+function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Pitch Pipe',
+    })
+    // Registering play/pause handlers is required for Android to show lock
+    // screen controls and maintain the audio session.
+    navigator.mediaSession.setActionHandler('play', () => {
+        audio.ctx.resume()
+    })
+    navigator.mediaSession.setActionHandler('pause', () => {
+        // We don't actually pause — pitch pipe is always-on while a note is
+        // held. But registering the handler prevents the OS from taking over.
+    })
+}
+setupMediaSession()
+
+// If the OS suspends the AudioContext (e.g. briefly on some devices),
+// resume it immediately so playback continues.
+audio.ctx.addEventListener('statechange', () => {
+    if (audio.ctx.state === 'suspended') {
+        audio.ctx.resume()
+    }
+})
+
 let playingNoteName = ''
 function updatePlayingNoteName(playingNotes: Map<NoteSpec, OscillatorNode>) {
     let equalPlaying = [...playingNotes.keys()].filter(note => note.tempering == 'equal')
