@@ -26,6 +26,8 @@
       aboutSection.style.display = (aboutShown) ? '' : 'none'
       aboutButton.innerText = (aboutShown) ? 'Close' : 'About'
     })
+
+    document.querySelector('#build-info').textContent = __COMMIT__
   </script>
 </head>
 
@@ -51,7 +53,7 @@
         <li>To play a chord on a computer, hold the shift key while clicking notes.</li>
       </ul>
     </p>
-    <footer>Created by <a href="https://www.jgibson.id.au/">Joel Gibson</a></footer>
+    <footer>Created by <a href="https://www.jgibson.id.au/">Joel Gibson</a> &middot; <small id="build-info" style="opacity:0.5"></small></footer>
   </section>
   <a class="aboutbutton" href="javascript:void(0)">About</a>
 </body>
