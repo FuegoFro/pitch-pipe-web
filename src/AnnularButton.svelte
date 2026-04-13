@@ -12,7 +12,9 @@
     export let startNote: () => void
     export let releaseNote: () => void
     export let toggleMode: boolean = false
+    export let releaseAllSignal: number = 0
     $: if (!toggleMode) releaseSustain()
+    $: if (releaseAllSignal) cancel()
     let angleWidth = 1 / 12
 
     function radial(angle: number, radius: number) {

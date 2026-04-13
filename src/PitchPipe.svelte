@@ -154,18 +154,10 @@ function setupAudio() {
     analyserNode.connect(gainNode)
 
     // Silent looping audio establishes OS audio focus so the screen lock
-    // doesn't kill the Web Audio context.
+    // doesn't kill the Web Audio context. Started/stopped in startNote/releaseNote.
     let mediaAudioElt = new Audio()
     mediaAudioElt.src = createSilentWavUrl(6)
     mediaAudioElt.loop = true
-
-    // Autoplay is blocked until a user gesture. Start the silent element
-    // whenever the AudioContext first runs (or resumes after lock).
-    ctx.addEventListener('statechange', () => {
-        if (ctx.state === 'running' && mediaAudioElt.paused) {
-            mediaAudioElt.play().catch((e) => console.warn('pitch-pipe: audio play() blocked', e))
-        }
-    })
 
     const dataArray = new Uint8Array(analyserNode.frequencyBinCount)
 
@@ -179,28 +171,38 @@ function setupAudio() {
 }
 const audio = setupAudio()
 
+const iconUrl = new URL('./icon/icon-512.png', import.meta.url).href
+
+let releaseAllSignal = 0
+function releaseAllNotes() {
+    releaseAllSignal += 1
+}
+
 function setupMediaSession() {
     if (!('mediaSession' in navigator)) return
     navigator.mediaSession.metadata = new MediaMetadata({
         title: 'Pitch Pipe',
+        artist: 'Pitch Pipe',
+        artwork: [{ src: iconUrl, sizes: '512x512', type: 'image/png' }],
     })
-    // Registering play/pause handlers is required for Android to show lock
-    // screen controls and maintain the audio session.
     navigator.mediaSession.setActionHandler('play', () => {
         audio.ctx.resume()
     })
     navigator.mediaSession.setActionHandler('pause', () => {
-        // We don't actually pause — pitch pipe is always-on while a note is
-        // held. But registering the handler prevents the OS from taking over.
+        releaseAllNotes()
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
     })
 }
 setupMediaSession()
 
 // If the OS suspends the AudioContext (e.g. briefly on some devices),
-// resume it immediately so playback continues.
+// resume it immediately. Also restart the silent audio if notes are still active.
 audio.ctx.addEventListener('statechange', () => {
     if (audio.ctx.state === 'suspended') {
         audio.ctx.resume()
+    }
+    if (audio.ctx.state === 'running' && audio.mediaAudioElt.paused && playingNotes.size > 0) {
+        audio.mediaAudioElt.play().catch((e) => console.warn('pitch-pipe: audio play() blocked', e))
     }
 })
 
@@ -224,12 +226,14 @@ function startNote(audio: {ctx: AudioContext, destination: AudioNode, mediaAudio
         audio.ctx.resume().then(() => startNote(audio, note))
         return
     }
+    if (playingNotes.has(note))
+        return
+
+    // Start the silent audio element on the first note — this is what holds
+    // OS audio focus and keeps Web Audio alive through screen lock.
     if (audio.mediaAudioElt.paused) {
         audio.mediaAudioElt.play().catch((e) => console.warn('pitch-pipe: audio play() blocked', e))
     }
-
-    if (playingNotes.has(note))
-        return
 
     let oscillatorNode = new OscillatorNode(audio.ctx, {
         type: waveSelected.type,
@@ -243,7 +247,7 @@ function startNote(audio: {ctx: AudioContext, destination: AudioNode, mediaAudio
     updatePlayingNoteName(playingNotes)
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
 }
-function releaseNote(audio: {ctx: AudioContext}, note: NoteSpec) {
+function releaseNote(audio: {ctx: AudioContext, mediaAudioElt: HTMLAudioElement}, note: NoteSpec) {
     if (!playingNotes.has(note))
         return
 
@@ -252,8 +256,10 @@ function releaseNote(audio: {ctx: AudioContext}, note: NoteSpec) {
 
     playingNotes.delete(note)
     updatePlayingNoteName(playingNotes)
-    if (playingNotes.size === 0 && 'mediaSession' in navigator)
-        navigator.mediaSession.playbackState = 'none'
+    if (playingNotes.size === 0) {
+        audio.mediaAudioElt.pause()
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
+    }
 }
 
 
@@ -506,6 +512,7 @@ const waveDims = {width: 55, height: 18}
                 startNote={() => startNote(audio, note)}
                 releaseNote={() => releaseNote(audio, note)}
                 toggleMode={toggleMode}
+                releaseAllSignal={releaseAllSignal}
                 />
             {/each}
             <path
