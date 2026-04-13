@@ -121,6 +121,27 @@ function radial(angle: number, radius: number) {
 }
 
 /** Set up an audio context, with a frequency analyser, array to place analyser results. */
+// Chrome only grants OS audio focus (needed to survive screen lock) when an
+// <audio> element with a real src is actively playing — Web Audio alone and
+// srcObject/MediaStream sources don't count because Chrome's currentTime
+// doesn't advance for them (WebAudio issue #2293). We create a looping silent
+// WAV (≥5s, Chrome's minimum for full audio focus) to hold the focus, while
+// the actual synthesis runs through ctx.destination as normal.
+function createSilentWavUrl(durationSecs: number): string {
+    const sampleRate = 8000  // minimum valid rate; keeps the buffer small
+    const numSamples = sampleRate * durationSecs
+    const buf = new ArrayBuffer(44 + numSamples * 2)
+    const v = new DataView(buf)
+    const str = (off: number, s: string) => s.split('').forEach((c, i) => v.setUint8(off + i, c.charCodeAt(0)))
+    str(0, 'RIFF'); v.setUint32(4, 36 + numSamples * 2, true); str(8, 'WAVE')
+    str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true)
+    v.setUint16(22, 1, true); v.setUint32(24, sampleRate, true)
+    v.setUint32(28, sampleRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true)
+    str(36, 'data'); v.setUint32(40, numSamples * 2, true)
+    // ArrayBuffer zero-initialised = silence
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }))
+}
+
 function setupAudio() {
     let ctx = new window.AudioContext()
     let analyserNode = new AnalyserNode(ctx, {
@@ -129,20 +150,17 @@ function setupAudio() {
     let gainNode = new GainNode(ctx, {
         gain: 0.04,
     })
-
-    // Route through a MediaStreamDestinationNode so the OS treats this as
-    // media playback, which allows audio to continue when the screen locks.
-    let mediaStreamDest = ctx.createMediaStreamDestination()
-    gainNode.connect(mediaStreamDest)
+    gainNode.connect(ctx.destination)
     analyserNode.connect(gainNode)
 
-    // The <audio> element is never added to the DOM; it just registers the
-    // stream with the browser's media machinery.
+    // Silent looping audio establishes OS audio focus so the screen lock
+    // doesn't kill the Web Audio context.
     let mediaAudioElt = new Audio()
-    mediaAudioElt.srcObject = mediaStreamDest.stream
+    mediaAudioElt.src = createSilentWavUrl(6)
+    mediaAudioElt.loop = true
 
-    // Autoplay is blocked until a user gesture. Resume the element
-    // whenever the AudioContext first starts (or resumes after lock).
+    // Autoplay is blocked until a user gesture. Start the silent element
+    // whenever the AudioContext first runs (or resumes after lock).
     ctx.addEventListener('statechange', () => {
         if (ctx.state === 'running' && mediaAudioElt.paused) {
             mediaAudioElt.play().catch((e) => console.warn('pitch-pipe: audio play() blocked', e))
