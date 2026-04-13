@@ -223,6 +223,7 @@ function startNote(audio: {ctx: AudioContext, destination: AudioNode, mediaAudio
 
     playingNotes.set(note, oscillatorNode)
     updatePlayingNoteName(playingNotes)
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
 }
 function releaseNote(audio: {ctx: AudioContext}, note: NoteSpec) {
     if (!playingNotes.has(note))
@@ -233,6 +234,8 @@ function releaseNote(audio: {ctx: AudioContext}, note: NoteSpec) {
 
     playingNotes.delete(note)
     updatePlayingNoteName(playingNotes)
+    if (playingNotes.size === 0 && 'mediaSession' in navigator)
+        navigator.mediaSession.playbackState = 'none'
 }
 
 
