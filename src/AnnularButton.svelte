@@ -84,7 +84,7 @@
     Using on:blur={cancel} here really messes things up on the iPhone, I think because touches often go off the edge.
     Only cancelling sustain instead seems to work a lot better, since we only expect sustain to be used on non-touch devices.
 -->
-<svelte:window on:keyup={onKeyUp} on:blur={releaseSustain}/>
+<svelte:window on:keyup={onKeyUp} on:blur={() => { if (!toggleMode) releaseSustain() }}/>
 
 <style>
     .stroked { stroke: #818CF8; }
