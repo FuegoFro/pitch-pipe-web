@@ -66,6 +66,7 @@ const justTemperedNotes: NoteSpec[] = [
     {ratio: 5/4, name: '5/4'},
     {ratio: 3/2, name: '3/2'},
     {ratio: 7/4, name: '7/4'},
+    {ratio: 15/8, name: '15/8'},
     {ratio: 2, name: '8ve'},
     {ratio: 9/4, name: '9/4'},
     {ratio: 11/8, name: '11/8', level: 2},
